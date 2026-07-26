@@ -8,7 +8,7 @@ This project predicts whether the home team wins an NFL game. The final project 
 
 ## Project Status
 
-Phase 2 is complete: the repository structure is in place, and raw NFL schedules plus weekly team statistics can be loaded with `nflreadpy`.
+Phase 3 is partially complete: raw NFL data can be loaded, and a cleaned game-level modeling dataset can be created.
 
 ## Planned Tech Stack
 
@@ -36,6 +36,16 @@ By default this loads completed seasons 2000-2025 and writes:
 - `data/raw/games.parquet`
 - `data/raw/team_stats.parquet`
 
+Create the cleaned game-level modeling dataset:
+
+```bash
+.venv/bin/python src/data/make_dataset.py
+```
+
+This writes:
+
+- `data/processed/modeling_dataset.parquet`
+
 ## Target
 
 The first model target will be `home_win`, defined as:
@@ -44,7 +54,16 @@ The first model target will be `home_win`, defined as:
 home_win = 1 if home_score > away_score else 0
 ```
 
-Tie handling will be documented when the processed dataset is created.
+Ties are removed from the first modeling dataset because the initial target is binary. This keeps `home_win` limited to two classes: `1` for a home win and `0` for an away win.
+
+## Data Filters
+
+The cleaned game-level dataset applies these filters:
+
+- Keep regular season games only with `game_type == "REG"`.
+- Remove games without final `home_score` or `away_score`.
+- Remove tied games.
+- Sort games chronologically by `season`, `week`, `gameday`, and `game_id`.
 
 ## Evaluation Plan
 
