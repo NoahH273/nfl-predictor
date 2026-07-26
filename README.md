@@ -8,7 +8,7 @@ This project predicts whether the home team wins an NFL game. The final project 
 
 ## Project Status
 
-Phase 1 is complete: the repository structure, starter documentation, dependency metadata, and generated-file ignore rules are in place.
+Phase 2 is complete: the repository structure is in place, and raw NFL schedules plus weekly team statistics can be loaded with `nflreadpy`.
 
 ## Planned Tech Stack
 
@@ -24,6 +24,17 @@ Phase 1 is complete: the repository structure, starter documentation, dependency
 ## Planned Data
 
 The project will use historical NFL data loaded with `nflreadpy`, including schedules and team-level weekly statistics for completed seasons. Raw Parquet files will be written under `data/raw/`, and the processed modeling dataset will be written under `data/processed/`.
+
+Load raw data:
+
+```bash
+.venv/bin/python src/data/load_raw_data.py
+```
+
+By default this loads completed seasons 2000-2025 and writes:
+
+- `data/raw/games.parquet`
+- `data/raw/team_stats.parquet`
 
 ## Target
 

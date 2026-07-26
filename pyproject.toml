@@ -17,7 +17,8 @@ dependencies = [
     "xgboost (>=3.3.0,<4.0.0)",
     "torch (>=2.13.0,<3.0.0)",
     "matplotlib (>=3.11.1,<4.0.0)",
-    "streamlit (>=1.60.0,<2.0.0)"
+    "streamlit (>=1.60.0,<2.0.0)",
+    "notebook (>=7.6.1,<8.0.0)"
 ]
 
 [tool.poetry]
