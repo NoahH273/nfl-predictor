@@ -1,15 +1,17 @@
-"""Build model-ready matchup features from the cleaned game dataset."""
+"""Build model-ready matchup and rolling team features."""
 
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
+import pandas as pd
 import polars as pl
 
 
 MODELING_DATASET_PATH = Path("data/processed/modeling_dataset.parquet")
-BASIC_FEATURES_PATH = Path("data/processed/basic_features.parquet")
+FEATURES_PATH = Path("data/processed/features.parquet")
+ROLLING_WINDOWS = (3, 5)
 
 REQUIRED_COLUMNS = {
     "game_id",
@@ -28,7 +30,7 @@ REQUIRED_COLUMNS = {
     "wind",
 }
 
-OUTPUT_COLUMNS = [
+BASIC_OUTPUT_COLUMNS = [
     "game_id",
     "season",
     "week",
@@ -49,9 +51,23 @@ OUTPUT_COLUMNS = [
 ]
 
 
+def rolling_feature_columns() -> list[str]:
+    columns = []
+    for side in ("home", "away"):
+        for window in ROLLING_WINDOWS:
+            columns.extend(
+                [
+                    f"{side}_rolling_win_pct_{window}",
+                    f"{side}_rolling_points_scored_{window}",
+                    f"{side}_rolling_points_allowed_{window}",
+                ]
+            )
+    return columns
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build basic matchup features for NFL game prediction."
+        description="Build matchup and rolling team features for NFL game prediction."
     )
     parser.add_argument(
         "--input-path",
@@ -62,8 +78,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-path",
         type=Path,
-        default=BASIC_FEATURES_PATH,
-        help=f"Feature dataset output path. Defaults to {BASIC_FEATURES_PATH}.",
+        default=FEATURES_PATH,
+        help=f"Feature dataset output path. Defaults to {FEATURES_PATH}.",
     )
     return parser.parse_args()
 
@@ -76,7 +92,7 @@ def validate_columns(df: pl.DataFrame) -> None:
 
 
 def build_basic_features(games: pl.DataFrame) -> pl.DataFrame:
-    """Create basic matchup features without rolling performance stats."""
+    """Create basic matchup features."""
     validate_columns(games)
 
     teams = (
@@ -102,7 +118,7 @@ def build_basic_features(games: pl.DataFrame) -> pl.DataFrame:
             pl.col("div_game").cast(pl.Int8).alias("is_division_game"),
             pl.col("gameday").str.to_date(strict=False).alias("gameday_sort"),
         )
-        .select(OUTPUT_COLUMNS + ["gameday_sort"])
+        .select(BASIC_OUTPUT_COLUMNS + ["gameday_sort"])
         .sort(["season", "week", "gameday_sort", "game_id"])
         .drop("gameday_sort")
     )
@@ -110,12 +126,103 @@ def build_basic_features(games: pl.DataFrame) -> pl.DataFrame:
     return features
 
 
-def make_basic_features(
+def build_rolling_features(games: pl.DataFrame) -> pl.DataFrame:
+    """Create prior-game rolling team features and return one row per matchup."""
+    validate_columns(games)
+
+    games_df = games.to_pandas()
+    games_df["gameday_sort"] = pd.to_datetime(games_df["gameday"], errors="coerce")
+    games_df = games_df.sort_values(
+        ["season", "week", "gameday_sort", "game_id"], kind="mergesort"
+    )
+
+    home_rows = pd.DataFrame(
+        {
+            "game_id": games_df["game_id"],
+            "season": games_df["season"],
+            "week": games_df["week"],
+            "gameday_sort": games_df["gameday_sort"],
+            "team": games_df["home_team"],
+            "is_home": True,
+            "win": games_df["home_win"],
+            "points_scored": games_df["home_score"],
+            "points_allowed": games_df["away_score"],
+        }
+    )
+    away_rows = pd.DataFrame(
+        {
+            "game_id": games_df["game_id"],
+            "season": games_df["season"],
+            "week": games_df["week"],
+            "gameday_sort": games_df["gameday_sort"],
+            "team": games_df["away_team"],
+            "is_home": False,
+            "win": 1 - games_df["home_win"],
+            "points_scored": games_df["away_score"],
+            "points_allowed": games_df["home_score"],
+        }
+    )
+
+    team_games = (
+        pd.concat([home_rows, away_rows], ignore_index=True)
+        .sort_values(
+            ["team", "season", "week", "gameday_sort", "game_id"],
+            kind="mergesort",
+        )
+        .reset_index(drop=True)
+    )
+
+    grouped = team_games.groupby("team", group_keys=False)
+    source_columns = ["win", "points_scored", "points_allowed"]
+    for window in ROLLING_WINDOWS:
+        for source_column in source_columns:
+            output_column = f"rolling_{source_column}_{window}"
+            team_games[output_column] = grouped[source_column].transform(
+                lambda values: values.shift(1).rolling(window, min_periods=1).mean()
+            )
+
+    rename_map = {
+        f"rolling_win_{window}": f"rolling_win_pct_{window}"
+        for window in ROLLING_WINDOWS
+    }
+    team_games = team_games.rename(columns=rename_map)
+
+    rolling_columns = [
+        f"rolling_win_pct_{window}" for window in ROLLING_WINDOWS
+    ] + [
+        f"rolling_points_scored_{window}" for window in ROLLING_WINDOWS
+    ] + [
+        f"rolling_points_allowed_{window}" for window in ROLLING_WINDOWS
+    ]
+
+    home_rolling = team_games[team_games["is_home"]][
+        ["game_id", *rolling_columns]
+    ].rename(columns={column: f"home_{column}" for column in rolling_columns})
+    away_rolling = team_games[~team_games["is_home"]][
+        ["game_id", *rolling_columns]
+    ].rename(columns={column: f"away_{column}" for column in rolling_columns})
+
+    matchup_rolling = games_df[["game_id"]].merge(home_rolling, on="game_id", how="left")
+    matchup_rolling = matchup_rolling.merge(away_rolling, on="game_id", how="left")
+
+    return pl.from_pandas(matchup_rolling)
+
+
+def build_features(games: pl.DataFrame) -> pl.DataFrame:
+    """Create basic matchup features plus prior-game rolling team features."""
+    basic_features = build_basic_features(games)
+    rolling_features = build_rolling_features(games)
+
+    features = basic_features.join(rolling_features, on="game_id", how="left")
+    return features.select(BASIC_OUTPUT_COLUMNS + rolling_feature_columns())
+
+
+def make_features(
     input_path: Path = MODELING_DATASET_PATH,
-    output_path: Path = BASIC_FEATURES_PATH,
+    output_path: Path = FEATURES_PATH,
 ) -> dict[str, int]:
     games = pl.read_parquet(input_path)
-    features = build_basic_features(games)
+    features = build_features(games)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     features.write_parquet(output_path)
@@ -129,9 +236,9 @@ def make_basic_features(
 
 def main() -> None:
     args = parse_args()
-    counts = make_basic_features(args.input_path, args.output_path)
+    counts = make_features(args.input_path, args.output_path)
 
-    print("Built basic matchup feature dataset")
+    print("Built matchup and rolling feature dataset")
     print(f"Input rows: {counts['input_rows']:,}")
     print(f"Output rows: {counts['output_rows']:,}")
     print(f"Output columns: {counts['output_columns']:,}")
