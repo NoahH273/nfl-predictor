@@ -46,6 +46,16 @@ This writes:
 
 - `data/processed/modeling_dataset.parquet`
 
+Build matchup and rolling team features:
+
+```bash
+.venv/bin/python src/features/build_features.py
+```
+
+This writes:
+
+- `data/processed/features.parquet`
+
 ## Target
 
 The first model target will be `home_win`, defined as:
@@ -65,13 +75,23 @@ The cleaned game-level dataset applies these filters:
 - Remove tied games.
 - Sort games chronologically by `season`, `week`, `gameday`, and `game_id`.
 
+## Feature Engineering
+
+The feature dataset starts with basic matchup fields: `season`, `week`, `home_team`, `away_team`, a string matchup label, numeric home and away team codes, division-game flag, roof, surface, temperature, and wind.
+
+It also adds rolling team-performance features for both the home and away teams:
+
+- 3-game and 5-game rolling win percentage
+- 3-game and 5-game rolling points scored
+- 3-game and 5-game rolling points allowed
+
 ## Evaluation Plan
 
 The main evaluation will use a season-based split instead of a random split. This better simulates the real use case: training on past seasons and predicting future games.
 
 ## Data Leakage Prevention
 
-Rolling team statistics will be shifted before being used as matchup features so that each prediction only uses information available before that game.
+Rolling team statistics are shifted before being used as matchup features so that each prediction only uses information available before that game. For each team, the current game is excluded with a one-game shift before calculating the 3-game and 5-game rolling averages. This prevents the model from learning from the result or score of the game it is trying to predict.
 
 ## How to Run
 

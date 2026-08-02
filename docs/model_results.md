@@ -18,4 +18,6 @@ This file will summarize model evaluation after the training phases are complete
 
 ## Leakage Prevention
 
-Rolling team statistics will be shifted before merging into each matchup so that the model only uses information available before kickoff. This prevents the model from learning from the result or statistics of the game it is trying to predict.
+Rolling team statistics are shifted before merging into each matchup so that the model only uses information available before kickoff. For each team, the feature builder sorts prior games chronologically, applies a one-game shift, then calculates 3-game and 5-game rolling averages for win percentage, points scored, and points allowed.
+
+The current game's result and scores are kept out of the rolling windows. This prevents the model from learning from the result or statistics of the game it is trying to predict.
