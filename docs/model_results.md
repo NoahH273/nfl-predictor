@@ -1,6 +1,6 @@
 # Model Results
 
-This file will summarize model evaluation after the training phases are complete.
+This file summarizes model evaluation as training phases are completed.
 
 ## Planned Metrics
 
@@ -12,9 +12,21 @@ This file will summarize model evaluation after the training phases are complete
 
 | Model | Validation Accuracy | Validation ROC-AUC | Validation Log Loss | Test Accuracy | Test ROC-AUC | Test Log Loss |
 | --- | --- | --- | --- | --- | --- | --- |
-| Logistic Regression | TBD | TBD | TBD | TBD | TBD | TBD |
+| Logistic Regression | 0.578 | 0.612 | 0.679 | 0.617 | 0.672 | 0.649 |
 | XGBoost | TBD | TBD | TBD | TBD | TBD | TBD |
 | PyTorch MLP | TBD | TBD | TBD | TBD | TBD | TBD |
+
+## Logistic Regression Baseline
+
+The logistic regression baseline uses the season-based split:
+
+- Train: 2000-2020
+- Validation: 2021-2023
+- Test: 2024-2025
+
+The model uses numeric preprocessing with median imputation and standard scaling, plus categorical preprocessing with most-frequent imputation and one-hot encoding. Numeric features include season, week, division flag, weather fields, and 3-game/5-game rolling team statistics. Categorical features include home team, away team, roof, and surface.
+
+Artifacts are saved under `artifacts/logistic_regression/`.
 
 ## Leakage Prevention
 

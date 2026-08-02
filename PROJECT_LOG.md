@@ -13,7 +13,7 @@ Completed the initial repository setup for the NFL predictor project.
 
 ## Upcoming Work
 
-- Phase 4: Build matchup and rolling team features.
+- Phase 7: Train the XGBoost model using the same feature set and split.
 
 ## Phase 2: Data Loading
 
@@ -47,3 +47,24 @@ Implemented `src/data/make_dataset.py` to create the first cleaned game-level mo
   - Removed tied games: 15.
   - Final modeling rows: 6,704.
 - Run command: `.venv/bin/python src/data/make_dataset.py`.
+
+## Phase 6: Logistic Regression Baseline
+
+Date: 2026-08-02
+
+Implemented `src/models/train_logistic_regression.py` as the first baseline model.
+
+- Model: scikit-learn `LogisticRegression`.
+- Training split: 2000-2020 only.
+- Validation split: 2021-2023.
+- Test split: 2024-2025.
+- Numeric preprocessing: median imputation and standard scaling for season, week, division flag, weather, and rolling team stats.
+- Categorical preprocessing: most-frequent imputation and one-hot encoding for home team, away team, roof, and surface.
+- Saved artifacts:
+  - `artifacts/logistic_regression/model.joblib`
+  - `artifacts/logistic_regression/metrics.json`
+  - `artifacts/logistic_regression/validation_predictions.parquet`
+  - `artifacts/logistic_regression/test_predictions.parquet`
+- Validation metrics: 0.578 accuracy, 0.612 ROC-AUC, 0.679 log loss.
+- Test metrics: 0.617 accuracy, 0.672 ROC-AUC, 0.649 log loss.
+- Run command: `.venv/bin/python src/models/train_logistic_regression.py`.
