@@ -56,6 +56,19 @@ This writes:
 
 - `data/processed/features.parquet`
 
+Create season-based train, validation, and test splits:
+
+```bash
+.venv/bin/python src/data/split_dataset.py
+```
+
+This writes:
+
+- `data/processed/features_with_splits.parquet`
+- `data/processed/train_features.parquet`
+- `data/processed/validation_features.parquet`
+- `data/processed/test_features.parquet`
+
 ## Target
 
 The first model target will be `home_win`, defined as:
@@ -87,7 +100,13 @@ It also adds rolling team-performance features for both the home and away teams:
 
 ## Evaluation Plan
 
-The main evaluation will use a season-based split instead of a random split. This better simulates the real use case: training on past seasons and predicting future games.
+The main evaluation uses a season-based split instead of a random split. This better simulates the real use case: training on past seasons and predicting future games.
+
+- Train: 2000-2020
+- Validation: 2021-2023
+- Test: 2024-2025
+
+Every model will use the same split so model comparisons are based on the same held-out seasons.
 
 ## Data Leakage Prevention
 
