@@ -13,7 +13,7 @@ Completed the initial repository setup for the NFL predictor project.
 
 ## Upcoming Work
 
-- Phase 7: Train the XGBoost model using the same feature set and split.
+- Phase 8: Train the PyTorch MLP using the same feature set and split.
 
 ## Phase 2: Data Loading
 
@@ -68,3 +68,27 @@ Implemented `src/models/train_logistic_regression.py` as the first baseline mode
 - Validation metrics: 0.578 accuracy, 0.612 ROC-AUC, 0.679 log loss.
 - Test metrics: 0.617 accuracy, 0.672 ROC-AUC, 0.649 log loss.
 - Run command: `.venv/bin/python src/models/train_logistic_regression.py`.
+
+## Phase 7: XGBoost Model
+
+Date: 2026-08-14
+
+Implemented `src/models/train_xgboost.py` as the main traditional ML model.
+
+- Model: `xgboost.XGBClassifier`.
+- Training split: 2000-2020 only.
+- Validation split: 2021-2023.
+- Test split: 2024-2025.
+- Feature set: same numeric and categorical predictors used by logistic regression.
+- Preprocessing: median imputation for numeric features and one-hot encoding for categorical features.
+- Basic configuration: 300 trees, 0.05 learning rate, max depth 3, 0.9 subsampling, 0.9 column sampling.
+- Saved artifacts:
+  - `artifacts/xgboost/model.joblib`
+  - `artifacts/xgboost/metrics.json`
+  - `artifacts/xgboost/feature_importance.parquet`
+  - `artifacts/xgboost/validation_predictions.parquet`
+  - `artifacts/xgboost/test_predictions.parquet`
+- Validation metrics: 0.605 accuracy, 0.625 ROC-AUC, 0.671 log loss.
+- Test metrics: 0.637 accuracy, 0.691 ROC-AUC, 0.635 log loss.
+- Top features: `home_rolling_win_pct_5`, `away_rolling_win_pct_5`, `home_rolling_points_scored_5`, `away_rolling_win_pct_3`, and `away_rolling_points_scored_5`.
+- Run command: `.venv/bin/python src/models/train_xgboost.py`.

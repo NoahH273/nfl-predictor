@@ -222,8 +222,7 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
-models/
-artifacts/
+artifacts/*
 *.pkl
 *.joblib
 *.pt

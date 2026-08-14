@@ -13,7 +13,7 @@ This file summarizes model evaluation as training phases are completed.
 | Model | Validation Accuracy | Validation ROC-AUC | Validation Log Loss | Test Accuracy | Test ROC-AUC | Test Log Loss |
 | --- | --- | --- | --- | --- | --- | --- |
 | Logistic Regression | 0.578 | 0.612 | 0.679 | 0.617 | 0.672 | 0.649 |
-| XGBoost | TBD | TBD | TBD | TBD | TBD | TBD |
+| XGBoost | 0.605 | 0.625 | 0.671 | 0.637 | 0.691 | 0.635 |
 | PyTorch MLP | TBD | TBD | TBD | TBD | TBD | TBD |
 
 ## Logistic Regression Baseline
@@ -27,6 +27,22 @@ The logistic regression baseline uses the season-based split:
 The model uses numeric preprocessing with median imputation and standard scaling, plus categorical preprocessing with most-frequent imputation and one-hot encoding. Numeric features include season, week, division flag, weather fields, and 3-game/5-game rolling team statistics. Categorical features include home team, away team, roof, and surface.
 
 Artifacts are saved under `artifacts/logistic_regression/`.
+
+## XGBoost
+
+The XGBoost model uses the same season-based split and feature set as logistic regression. It uses median imputation for numeric features and one-hot encoding for categorical features, then trains a basic `XGBClassifier` with a conservative tree depth and learning rate.
+
+Artifacts are saved under `artifacts/xgboost/`.
+
+Top predictive features by XGBoost feature importance:
+
+| Feature | Importance |
+| --- | ---: |
+| home_rolling_win_pct_5 | 0.046 |
+| away_rolling_win_pct_5 | 0.041 |
+| home_rolling_points_scored_5 | 0.028 |
+| away_rolling_win_pct_3 | 0.022 |
+| away_rolling_points_scored_5 | 0.022 |
 
 ## Leakage Prevention
 
