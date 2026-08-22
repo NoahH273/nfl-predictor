@@ -1,20 +1,46 @@
 # Model Results
 
-This file summarizes model evaluation as training phases are completed.
+This file summarizes model evaluation for the season-based held-out splits.
 
-## Planned Metrics
+## Metrics
 
 - Accuracy
 - ROC-AUC
 - Log loss
 
-## Planned Model Comparison
+## Model Comparison
 
 | Model | Validation Accuracy | Validation ROC-AUC | Validation Log Loss | Test Accuracy | Test ROC-AUC | Test Log Loss |
 | --- | --- | --- | --- | --- | --- | --- |
 | Logistic Regression | 0.578 | 0.612 | 0.679 | 0.617 | 0.672 | 0.649 |
 | XGBoost | 0.605 | 0.625 | 0.671 | 0.637 | 0.691 | 0.635 |
 | PyTorch MLP | 0.586 | 0.613 | 0.746 | 0.587 | 0.656 | 0.699 |
+
+## Test Precision And Recall
+
+These optional metrics use the same held-out 2024-2025 test split and a 0.50 probability threshold.
+
+| Model | Test Precision | Test Recall |
+| --- | ---: | ---: |
+| Logistic Regression | 0.626 | 0.708 |
+| XGBoost | 0.657 | 0.677 |
+| PyTorch MLP | 0.612 | 0.629 |
+
+All three models were evaluated on the same chronological split:
+
+- Train: 2000-2020
+- Validation: 2021-2023
+- Test: 2024-2025
+
+The test split is the main held-out comparison because it represents the most recent unseen seasons.
+
+## Summary
+
+XGBoost performed best overall, with the highest validation and test accuracy, highest validation and test ROC-AUC, and lowest validation and test log loss. On the held-out test seasons, XGBoost reached 0.637 accuracy, 0.691 ROC-AUC, and 0.635 log loss.
+
+The logistic regression baseline was competitive but weaker than XGBoost, which suggests the engineered rolling features contain useful signal even for a simple linear baseline.
+
+The PyTorch MLP did not outperform XGBoost. That is reasonable for this project because the dataset is relatively small and tabular, while tree-based boosted models often perform strongly on structured features with limited tuning. The PyTorch training history also shows validation loss increasing while training loss decreases, which suggests the MLP began to overfit the training seasons.
 
 ## Logistic Regression Baseline
 
@@ -50,7 +76,7 @@ The PyTorch model uses the same season-based split and feature set as the logist
 
 Artifacts are saved under `artifacts/pytorch/`.
 
-The PyTorch MLP did not outperform XGBoost. That is reasonable for this project because the dataset is relatively small and tabular, while tree-based boosted models often perform strongly on structured features with limited tuning. The training history also shows validation loss increasing while training loss decreases, which suggests the MLP began to overfit the training seasons.
+This model is useful as a neural-network comparison even though it is not the best-performing model.
 
 ## Leakage Prevention
 
