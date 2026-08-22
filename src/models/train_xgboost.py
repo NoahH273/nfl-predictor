@@ -18,7 +18,6 @@ from xgboost import XGBClassifier
 from train_logistic_regression import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
-    TARGET_COLUMN,
     TEST_PATH,
     TRAIN_PATH,
     VALIDATION_PATH,
