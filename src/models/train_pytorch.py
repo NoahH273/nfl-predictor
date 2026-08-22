@@ -13,6 +13,7 @@ import pandas as pd
 import torch
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score, log_loss, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from torch import nn
@@ -21,6 +22,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from train_logistic_regression import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
+    TEST_PATH,
     TRAIN_PATH,
     VALIDATION_PATH,
     load_split,
@@ -33,6 +35,9 @@ PREPROCESSOR_PATH = ARTIFACTS_DIR / "preprocessor.joblib"
 MODEL_PATH = ARTIFACTS_DIR / "model.pt"
 TRAINING_HISTORY_PATH = ARTIFACTS_DIR / "training_history.json"
 MODEL_CONFIG_PATH = ARTIFACTS_DIR / "model_config.json"
+METRICS_PATH = ARTIFACTS_DIR / "metrics.json"
+VALIDATION_PREDICTIONS_PATH = ARTIFACTS_DIR / "validation_predictions.parquet"
+TEST_PREDICTIONS_PATH = ARTIFACTS_DIR / "test_predictions.parquet"
 
 DEFAULT_EPOCHS = 50
 DEFAULT_BATCH_SIZE = 64
@@ -72,6 +77,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=VALIDATION_PATH,
         help=f"Validation split path. Defaults to {VALIDATION_PATH}.",
+    )
+    parser.add_argument(
+        "--test-path",
+        type=Path,
+        default=TEST_PATH,
+        help=f"Test split path. Defaults to {TEST_PATH}.",
     )
     parser.add_argument(
         "--artifacts-dir",
@@ -163,6 +174,16 @@ def transform_features(
     return x_train_array, y_train_array, x_validation_array, y_validation_array
 
 
+def transform_split(
+    preprocessor: ColumnTransformer,
+    df: pd.DataFrame,
+) -> tuple[np.ndarray, np.ndarray]:
+    x, y = split_xy(df)
+    x_array = preprocessor.transform(x).astype(np.float32)
+    y_array = y.to_numpy(dtype=np.float32)
+    return x_array, y_array
+
+
 def make_data_loader(
     x: np.ndarray,
     y: np.ndarray,
@@ -248,9 +269,49 @@ def train_model(
     return history
 
 
+def predict_probabilities(model: GameOutcomeMLP, x: np.ndarray) -> np.ndarray:
+    model.eval()
+    with torch.no_grad():
+        logits = model(torch.from_numpy(x))
+        probabilities = torch.sigmoid(logits).numpy()
+    return probabilities
+
+
+def evaluate_model(
+    model: GameOutcomeMLP,
+    x: np.ndarray,
+    y: np.ndarray,
+    df: pd.DataFrame,
+    split_name: str,
+) -> tuple[dict[str, float], pd.DataFrame]:
+    probabilities = predict_probabilities(model, x)
+    predictions = (probabilities >= 0.5).astype(int)
+
+    metrics = {
+        "accuracy": accuracy_score(y, predictions),
+        "roc_auc": roc_auc_score(y, probabilities),
+        "log_loss": log_loss(y, probabilities),
+        "rows": len(df),
+    }
+
+    prediction_columns = [
+        column
+        for column in ["game_id", "season", "week", "gameday", "home_team", "away_team"]
+        if column in df.columns
+    ]
+    prediction_df = df[prediction_columns].copy()
+    prediction_df["split"] = split_name
+    prediction_df["actual_home_win"] = y.astype(int)
+    prediction_df["predicted_home_win"] = predictions
+    prediction_df["home_win_probability"] = probabilities
+
+    return metrics, prediction_df
+
+
 def train_pytorch_mlp(
     train_path: Path = TRAIN_PATH,
     validation_path: Path = VALIDATION_PATH,
+    test_path: Path = TEST_PATH,
     artifacts_dir: Path = ARTIFACTS_DIR,
     epochs: int = DEFAULT_EPOCHS,
     batch_size: int = DEFAULT_BATCH_SIZE,
@@ -263,10 +324,12 @@ def train_pytorch_mlp(
 
     train_df = load_split(train_path)
     validation_df = load_split(validation_path)
+    test_df = load_split(test_path)
     preprocessor = build_preprocessor()
     x_train, y_train, x_validation, y_validation = transform_features(
         preprocessor, train_df, validation_df
     )
+    x_test, y_test = transform_split(preprocessor, test_df)
 
     train_loader = make_data_loader(x_train, y_train, batch_size, shuffle=True)
     validation_loader = make_data_loader(
@@ -279,6 +342,12 @@ def train_pytorch_mlp(
     )
     history = train_model(model, train_loader,
                           validation_loader, epochs, learning_rate)
+    validation_metrics, validation_predictions = evaluate_model(
+        model, x_validation, y_validation, validation_df, "validation"
+    )
+    test_metrics, test_predictions = evaluate_model(
+        model, x_test, y_test, test_df, "test"
+    )
 
     config = {
         "model": "PyTorch MLP",
@@ -307,6 +376,24 @@ def train_pytorch_mlp(
                 int(validation_df["season"].max()),
             ],
         },
+        "test": {
+            "rows": len(test_df),
+            "seasons": [
+                int(test_df["season"].min()),
+                int(test_df["season"].max()),
+            ],
+        },
+    }
+    metrics = {
+        "model": "PyTorch MLP",
+        "features": {
+            "numeric": NUMERIC_FEATURES,
+            "categorical": CATEGORICAL_FEATURES,
+        },
+        "train": config["train"],
+        "validation": validation_metrics,
+        "test": test_metrics,
+        "final_epoch": history[-1],
     }
 
     artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -318,18 +405,48 @@ def train_pytorch_mlp(
     (artifacts_dir / MODEL_CONFIG_PATH.name).write_text(
         json.dumps(config, indent=2), encoding="utf-8"
     )
+    (artifacts_dir / METRICS_PATH.name).write_text(
+        json.dumps(metrics, indent=2), encoding="utf-8"
+    )
+    validation_predictions.to_parquet(
+        artifacts_dir / VALIDATION_PREDICTIONS_PATH.name, index=False
+    )
+    test_predictions.to_parquet(
+        artifacts_dir / TEST_PREDICTIONS_PATH.name, index=False
+    )
 
     return {
         "config": config,
         "history": history,
+        "metrics": metrics,
     }
+
+
+def print_metrics(result: dict, artifacts_dir: Path = ARTIFACTS_DIR) -> None:
+    metrics = result["metrics"]
+    print("Trained PyTorch MLP")
+    print(
+        "Train rows: "
+        f"{metrics['train']['rows']:,} "
+        f"({metrics['train']['seasons'][0]}-{metrics['train']['seasons'][1]})"
+    )
+    for split_name in ("validation", "test"):
+        split_metrics = metrics[split_name]
+        print(
+            f"{split_name.title()} rows: {split_metrics['rows']:,} | "
+            f"Accuracy: {split_metrics['accuracy']:.3f} | "
+            f"ROC-AUC: {split_metrics['roc_auc']:.3f} | "
+            f"Log Loss: {split_metrics['log_loss']:.3f}"
+        )
+    print(f"Artifacts: {artifacts_dir}")
 
 
 def main() -> None:
     args = parse_args()
-    train_pytorch_mlp(
+    result = train_pytorch_mlp(
         train_path=args.train_path,
         validation_path=args.validation_path,
+        test_path=args.test_path,
         artifacts_dir=args.artifacts_dir,
         epochs=args.epochs,
         batch_size=args.batch_size,
@@ -338,7 +455,7 @@ def main() -> None:
         dropout=args.dropout,
         seed=args.seed,
     )
-    print(f"Saved PyTorch training artifacts to {args.artifacts_dir}")
+    print_metrics(result, args.artifacts_dir)
 
 
 if __name__ == "__main__":

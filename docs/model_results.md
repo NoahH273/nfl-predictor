@@ -14,7 +14,7 @@ This file summarizes model evaluation as training phases are completed.
 | --- | --- | --- | --- | --- | --- | --- |
 | Logistic Regression | 0.578 | 0.612 | 0.679 | 0.617 | 0.672 | 0.649 |
 | XGBoost | 0.605 | 0.625 | 0.671 | 0.637 | 0.691 | 0.635 |
-| PyTorch MLP | TBD | TBD | TBD | TBD | TBD | TBD |
+| PyTorch MLP | 0.586 | 0.613 | 0.746 | 0.587 | 0.656 | 0.699 |
 
 ## Logistic Regression Baseline
 
@@ -43,6 +43,14 @@ Top predictive features by XGBoost feature importance:
 | home_rolling_points_scored_5 | 0.028 |
 | away_rolling_win_pct_3 | 0.022 |
 | away_rolling_points_scored_5 | 0.022 |
+
+## PyTorch MLP
+
+The PyTorch model uses the same season-based split and feature set as the logistic regression and XGBoost models. It uses median imputation and standard scaling for numeric features, one-hot encoding for categorical features, and a simple multilayer perceptron with one hidden layer, ReLU activation, dropout, and a single logit output trained with `BCEWithLogitsLoss`.
+
+Artifacts are saved under `artifacts/pytorch/`.
+
+The PyTorch MLP did not outperform XGBoost. That is reasonable for this project because the dataset is relatively small and tabular, while tree-based boosted models often perform strongly on structured features with limited tuning. The training history also shows validation loss increasing while training loss decreases, which suggests the MLP began to overfit the training seasons.
 
 ## Leakage Prevention
 

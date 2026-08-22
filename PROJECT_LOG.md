@@ -13,7 +13,7 @@ Completed the initial repository setup for the NFL predictor project.
 
 ## Upcoming Work
 
-- Phase 8: Train the PyTorch MLP using the same feature set and split.
+- Phase 9: Standardize evaluation utilities and finalize model comparison results.
 
 ## Phase 2: Data Loading
 
@@ -92,3 +92,31 @@ Implemented `src/models/train_xgboost.py` as the main traditional ML model.
 - Test metrics: 0.637 accuracy, 0.691 ROC-AUC, 0.635 log loss.
 - Top features: `home_rolling_win_pct_5`, `away_rolling_win_pct_5`, `home_rolling_points_scored_5`, `away_rolling_win_pct_3`, and `away_rolling_points_scored_5`.
 - Run command: `.venv/bin/python src/models/train_xgboost.py`.
+
+## Phase 8: PyTorch MLP
+
+Date: 2026-08-22
+
+Implemented and ran `src/models/train_pytorch.py` as the neural network comparison model.
+
+- Model: PyTorch multilayer perceptron.
+- Architecture: input layer, one hidden linear layer, ReLU, dropout, and one linear output logit.
+- Loss: `BCEWithLogitsLoss`.
+- Optimizer: Adam.
+- Training split: 2000-2020 only.
+- Validation split: 2021-2023.
+- Test split: 2024-2025.
+- Feature set: same numeric and categorical predictors used by logistic regression and XGBoost.
+- Preprocessing: median imputation and standard scaling for numeric features, plus most-frequent imputation and one-hot encoding for categorical features.
+- Saved artifacts:
+  - `artifacts/pytorch/preprocessor.joblib`
+  - `artifacts/pytorch/model.pt`
+  - `artifacts/pytorch/model_config.json`
+  - `artifacts/pytorch/training_history.json`
+  - `artifacts/pytorch/metrics.json`
+  - `artifacts/pytorch/validation_predictions.parquet`
+  - `artifacts/pytorch/test_predictions.parquet`
+- Validation metrics: 0.586 accuracy, 0.613 ROC-AUC, 0.746 log loss.
+- Test metrics: 0.587 accuracy, 0.656 ROC-AUC, 0.699 log loss.
+- The MLP did not beat XGBoost, which is reasonable for a small tabular dataset. Training loss decreased while validation loss increased, suggesting the network began to overfit.
+- Run command: `.venv/bin/python src/models/train_pytorch.py`.
