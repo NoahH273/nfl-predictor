@@ -69,6 +69,14 @@ This writes:
 - `data/processed/validation_features.parquet`
 - `data/processed/test_features.parquet`
 
+Run the Streamlit demo:
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+The demo loads the saved XGBoost pipeline from `artifacts/xgboost/model.joblib`, lets the user select home and away teams, and displays the predicted winner and home team win probability.
+
 ## Target
 
 The first model target will be `home_win`, defined as:
@@ -120,4 +128,8 @@ Install dependencies:
 poetry install
 ```
 
-Phase-specific commands will be added as the data pipeline, models, and Streamlit app are implemented.
+Run the local prediction demo:
+
+```bash
+streamlit run app/streamlit_app.py
+```
