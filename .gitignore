@@ -222,7 +222,11 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+!data/processed/modeling_dataset.parquet
+!data/processed/features.parquet
 artifacts/*
+!artifacts/.gitkeep
+!artifacts/xgboost/model.joblib
 *.pkl
 *.joblib
 *.pt
