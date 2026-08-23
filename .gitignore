@@ -226,9 +226,10 @@ data/processed/*
 !data/processed/features.parquet
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/xgboost/
+artifacts/xgboost/*
 !artifacts/xgboost/model.joblib
 *.pkl
-*.joblib
 *.pt
 *.pth
 *.onnx
