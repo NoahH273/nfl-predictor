@@ -1,0 +1,58 @@
+{
+  "model": "PyTorch MLP",
+  "input_dim": 99,
+  "hidden_size": 64,
+  "dropout": 0.2,
+  "epochs": 50,
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seed": 42,
+  "features": {
+    "numeric": [
+      "season",
+      "week",
+      "is_division_game",
+      "temp",
+      "wind",
+      "home_rolling_win_pct_3",
+      "home_rolling_points_scored_3",
+      "home_rolling_points_allowed_3",
+      "home_rolling_win_pct_5",
+      "home_rolling_points_scored_5",
+      "home_rolling_points_allowed_5",
+      "away_rolling_win_pct_3",
+      "away_rolling_points_scored_3",
+      "away_rolling_points_allowed_3",
+      "away_rolling_win_pct_5",
+      "away_rolling_points_scored_5",
+      "away_rolling_points_allowed_5"
+    ],
+    "categorical": [
+      "home_team",
+      "away_team",
+      "roof",
+      "surface"
+    ]
+  },
+  "train": {
+    "rows": 5349,
+    "seasons": [
+      2000,
+      2020
+    ]
+  },
+  "validation": {
+    "rows": 812,
+    "seasons": [
+      2021,
+      2023
+    ]
+  },
+  "test": {
+    "rows": 543,
+    "seasons": [
+      2024,
+      2025
+    ]
+  }
+}

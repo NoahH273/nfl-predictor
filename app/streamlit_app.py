@@ -2,18 +2,37 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
 import streamlit as st
+import torch
+from torch import nn
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-MODEL_PATH = ROOT_DIR / "artifacts/xgboost/model.joblib"
 GAMES_PATH = ROOT_DIR / "data/processed/modeling_dataset.parquet"
 FEATURES_PATH = ROOT_DIR / "data/processed/features.parquet"
-MODEL_NAME = "XGBoost"
+
+MODEL_OPTIONS = {
+    "Logistic Regression": {
+        "kind": "sklearn",
+        "path": ROOT_DIR / "artifacts/logistic_regression/model.joblib",
+    },
+    "XGBoost": {
+        "kind": "sklearn",
+        "path": ROOT_DIR / "artifacts/xgboost/model.joblib",
+    },
+    "PyTorch MLP": {
+        "kind": "pytorch",
+        "model_path": ROOT_DIR / "artifacts/pytorch/model.pt",
+        "preprocessor_path": ROOT_DIR / "artifacts/pytorch/preprocessor.joblib",
+        "config_path": ROOT_DIR / "artifacts/pytorch/model_config.json",
+    },
+}
 
 ROLLING_FEATURES = [
     "rolling_win_pct_3",
@@ -60,9 +79,75 @@ DIVISIONS = {
 }
 
 
+class GameOutcomeMLP(nn.Module):
+    """Simple multilayer perceptron for binary game outcome prediction."""
+
+    def __init__(self, input_dim: int, hidden_size: int, dropout: float) -> None:
+        super().__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_size, 1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.network(x).squeeze(1)
+
+
+class PyTorchPredictionModel:
+    """Prediction wrapper matching sklearn's predict_proba output shape."""
+
+    def __init__(
+        self,
+        preprocessor,
+        model: GameOutcomeMLP,
+    ) -> None:
+        self.preprocessor = preprocessor
+        self.model = model
+
+    def predict_proba(self, rows: pd.DataFrame) -> np.ndarray:
+        features = self.preprocessor.transform(rows).astype(np.float32)
+        self.model.eval()
+
+        with torch.no_grad():
+            logits = self.model(torch.from_numpy(features))
+            probabilities = torch.sigmoid(logits).numpy()
+
+        return np.column_stack([1 - probabilities, probabilities])
+
+
 @st.cache_resource
-def load_model():
-    return joblib.load(MODEL_PATH)
+def load_model(model_name: str):
+    model_info = MODEL_OPTIONS[model_name]
+
+    if model_info["kind"] == "sklearn":
+        return joblib.load(model_info["path"])
+
+    with open(model_info["config_path"], encoding="utf-8") as file:
+        config = json.load(file)
+
+    preprocessor = joblib.load(model_info["preprocessor_path"])
+    model = GameOutcomeMLP(
+        input_dim=int(config["input_dim"]),
+        hidden_size=int(config["hidden_size"]),
+        dropout=float(config["dropout"]),
+    )
+    state_dict = torch.load(model_info["model_path"], map_location="cpu")
+    model.load_state_dict(state_dict)
+    model.eval()
+
+    return PyTorchPredictionModel(preprocessor, model)
+
+
+def validate_model_artifacts(model_name: str) -> list[Path]:
+    model_info = MODEL_OPTIONS[model_name]
+    paths = [
+        value
+        for key, value in model_info.items()
+        if key.endswith("path") and isinstance(value, Path)
+    ]
+    return [path for path in paths if not path.exists()]
 
 
 @st.cache_data
@@ -195,14 +280,25 @@ def main() -> None:
     st.set_page_config(page_title="NFL Game Predictor")
     st.title("NFL Game Predictor")
 
-    model = load_model()
     games = load_games()
     features = load_feature_context()
     form = latest_team_form(games)
     teams = available_teams(games)
     context = default_game_context(features)
 
-    st.caption(f"Model: {MODEL_NAME}")
+    selected_model = st.selectbox(
+        "Model",
+        list(MODEL_OPTIONS),
+        index=list(MODEL_OPTIONS).index("XGBoost"),
+    )
+    missing_artifacts = validate_model_artifacts(selected_model)
+    if missing_artifacts:
+        st.error(
+            "Missing model artifact(s): "
+            + ", ".join(str(path.relative_to(ROOT_DIR)) for path in missing_artifacts)
+        )
+        st.stop()
+    model = load_model(selected_model)
 
     col_home, col_away = st.columns(2)
     home_team = col_home.selectbox("Home team", teams, index=teams.index("ARI"))
