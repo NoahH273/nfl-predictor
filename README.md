@@ -2,7 +2,7 @@
 
 An end-to-end machine learning project that predicts whether the home team wins an NFL game using historical nflverse data loaded with `nflreadpy`.
 
-Live demo: [Streamlit Community Cloud](https://noahh273-nfl-predictor-appstreamlit-app-arwef9.streamlit.app/)
+Live demo: [Streamlit Community Cloud](https://noahh273-nfl-predictor.streamlit.app/)
 
 ## Overview
 
@@ -92,11 +92,11 @@ Models compared:
 
 ## Results
 
-| Model | Validation Accuracy | Validation ROC-AUC | Validation Log Loss | Test Accuracy | Test ROC-AUC | Test Log Loss |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Logistic Regression | 0.578 | 0.612 | 0.679 | 0.617 | 0.672 | 0.649 |
-| XGBoost | 0.605 | 0.625 | 0.671 | 0.637 | 0.691 | 0.635 |
-| PyTorch MLP | 0.586 | 0.613 | 0.746 | 0.587 | 0.656 | 0.699 |
+| Model               | Validation Accuracy | Validation ROC-AUC | Validation Log Loss | Test Accuracy | Test ROC-AUC | Test Log Loss |
+| ------------------- | ------------------: | -----------------: | ------------------: | ------------: | -----------: | ------------: |
+| Logistic Regression |               0.578 |              0.612 |               0.679 |         0.617 |        0.672 |         0.649 |
+| XGBoost             |               0.605 |              0.625 |               0.671 |         0.637 |        0.691 |         0.635 |
+| PyTorch MLP         |               0.586 |              0.613 |               0.746 |         0.587 |        0.656 |         0.699 |
 
 XGBoost performed best overall on the held-out test seasons. This is reasonable because boosted tree models often perform well on smaller tabular datasets with engineered features.
 
