@@ -21,8 +21,6 @@ The target is `home_win`, where `1` means the home team won and `0` means the aw
 
 The goal is to demonstrate practical Python data engineering, leakage-aware feature engineering, basic machine learning evaluation, and PyTorch experience in a project that is easy to understand and run locally.
 
-This is a learning project, not a betting model.
-
 ## Tech Stack
 
 - Python 3.12
@@ -146,7 +144,7 @@ streamlit run app/streamlit_app.py
 
 Deployment:
 
-- Streamlit Community Cloud: [NFL Game Predictor](https://noahh273-nfl-predictor-appstreamlit-app-arwef9.streamlit.app/)
+- Streamlit Community Cloud: [NFL Game Predictor](https://noahh273-nfl-predictor.streamlit.app/)
 
 The app can run predictions with Logistic Regression, XGBoost, or the PyTorch MLP. XGBoost is selected by default because it had the strongest held-out test performance.
 
@@ -158,13 +156,9 @@ The app can run predictions with Logistic Regression, XGBoost, or the PyTorch ML
 - The model predicts straight-up home wins, not betting spreads or betting value.
 - The project is intended as a learning project, not as betting advice.
 
-## Future Work
+## Possible Future Work
 
 - Add model calibration to improve probability quality.
 - Add richer team-strength features such as ELO ratings.
 - Improve the Streamlit UI with clearer matchup context and recent team form.
 - Add automated notebook execution checks.
-
-## Resume Bullet
-
-Built an end-to-end NFL game prediction system using Python, nflreadpy, scikit-learn, XGBoost, and PyTorch, engineering rolling team-performance features and evaluating models with season-based validation.
