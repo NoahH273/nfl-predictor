@@ -13,7 +13,7 @@ This project builds a reproducible NFL game prediction pipeline:
 - engineer matchup and rolling team-performance features
 - train Logistic Regression, XGBoost, and PyTorch MLP models
 - compare models on held-out seasons
-- serve a simple Streamlit prediction demo
+- serve a simple Streamlit prediction demo with selectable models
 
 The target is `home_win`, where `1` means the home team won and `0` means the away team won.
 
@@ -147,6 +147,8 @@ streamlit run app/streamlit_app.py
 Deployment:
 
 - Streamlit Community Cloud: [NFL Game Predictor](https://noahh273-nfl-predictor-appstreamlit-app-arwef9.streamlit.app/)
+
+The app can run predictions with Logistic Regression, XGBoost, or the PyTorch MLP. XGBoost is selected by default because it had the strongest held-out test performance.
 
 ## Limitations
 

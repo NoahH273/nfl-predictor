@@ -11,10 +11,6 @@ Completed the initial repository setup for the NFL predictor project.
 - Updated `.gitignore` so generated data and model artifacts stay out of version control.
 - Added starter documentation files for project progress and model results.
 
-## Upcoming Work
-
-- Phase 14: Final resume-ready review and polish.
-
 ## Phase 2: Data Loading
 
 Date: 2026-07-26

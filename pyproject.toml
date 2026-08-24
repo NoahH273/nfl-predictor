@@ -1,7 +1,7 @@
 [project]
 name = "nfl-predictor"
 version = "0.1.0"
-description = ""
+description = "End-to-end NFL game outcome prediction project with rolling features, model comparison, and a Streamlit demo."
 authors = [
     {name = "Noah",email = "nhymson9@icloud.com"}
 ]
