@@ -1,124 +1,106 @@
-# NFL Predictor
+# NFL Game Predictor
 
-NFL game outcome prediction project using `nflreadpy`, scikit-learn, XGBoost, and PyTorch.
+An end-to-end machine learning project that predicts whether the home team wins an NFL game using historical nflverse data loaded with `nflreadpy`.
+
+Live demo: [Streamlit Community Cloud](https://noahh273-nfl-predictor-appstreamlit-app-arwef9.streamlit.app/)
 
 ## Overview
 
-This project predicts whether the home team wins an NFL game. The final project will include a reproducible data pipeline, engineered rolling team features, model comparisons, and a small prediction demo.
+This project builds a reproducible NFL game prediction pipeline:
 
-## Project Status
+- load historical schedules and team statistics
+- create a cleaned game-level modeling dataset
+- engineer matchup and rolling team-performance features
+- train Logistic Regression, XGBoost, and PyTorch MLP models
+- compare models on held-out seasons
+- serve a simple Streamlit prediction demo
 
-Phase 3 is partially complete: raw NFL data can be loaded, and a cleaned game-level modeling dataset can be created.
+The target is `home_win`, where `1` means the home team won and `0` means the away team won.
 
-## Planned Tech Stack
+## Motivation
+
+The goal is to demonstrate practical Python data engineering, leakage-aware feature engineering, basic machine learning evaluation, and PyTorch experience in a project that is easy to understand and run locally.
+
+This is a learning project, not a betting model.
+
+## Tech Stack
 
 - Python 3.12
 - Poetry
-- `nflreadpy` for NFL data access
-- pandas, Polars, NumPy, and PyArrow for data processing
-- scikit-learn for baseline modeling and metrics
-- XGBoost for tree-based modeling
-- PyTorch for an MLP model
-- Streamlit for the demo app
+- `nflreadpy` / nflverse
+- pandas, Polars, NumPy, PyArrow
+- scikit-learn
+- XGBoost
+- PyTorch
+- Streamlit
 
-## Planned Data
+## Data
 
-The project will use historical NFL data loaded with `nflreadpy`, including schedules and team-level weekly statistics for completed seasons. Raw Parquet files will be written under `data/raw/`, and the processed modeling dataset will be written under `data/processed/`.
+Data comes from `nflreadpy`, which provides access to nflverse datasets.
 
-Load raw data:
-
-```bash
-.venv/bin/python src/data/load_raw_data.py
-```
-
-By default this loads completed seasons 2000-2025 and writes:
+Raw files:
 
 - `data/raw/games.parquet`
 - `data/raw/team_stats.parquet`
 
-Create the cleaned game-level modeling dataset:
-
-```bash
-.venv/bin/python src/data/make_dataset.py
-```
-
-This writes:
+Processed files:
 
 - `data/processed/modeling_dataset.parquet`
-
-Build matchup and rolling team features:
-
-```bash
-.venv/bin/python src/features/build_features.py
-```
-
-This writes:
-
 - `data/processed/features.parquet`
-
-Create season-based train, validation, and test splits:
-
-```bash
-.venv/bin/python src/data/split_dataset.py
-```
-
-This writes:
-
-- `data/processed/features_with_splits.parquet`
 - `data/processed/train_features.parquet`
 - `data/processed/validation_features.parquet`
 - `data/processed/test_features.parquet`
 
-Run the Streamlit demo:
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-The demo loads the saved XGBoost pipeline from `artifacts/xgboost/model.joblib`, lets the user select home and away teams, and displays the predicted winner and home team win probability.
-
-## Target
-
-The first model target will be `home_win`, defined as:
-
-```text
-home_win = 1 if home_score > away_score else 0
-```
-
-Ties are removed from the first modeling dataset because the initial target is binary. This keeps `home_win` limited to two classes: `1` for a home win and `0` for an away win.
-
-## Data Filters
-
-The cleaned game-level dataset applies these filters:
-
-- Keep regular season games only with `game_type == "REG"`.
-- Remove games without final `home_score` or `away_score`.
-- Remove tied games.
-- Sort games chronologically by `season`, `week`, `gameday`, and `game_id`.
+The cleaned dataset keeps regular season games only, removes games without final scores, removes ties, and sorts games chronologically.
 
 ## Feature Engineering
 
-The feature dataset starts with basic matchup fields: `season`, `week`, `home_team`, `away_team`, a string matchup label, numeric home and away team codes, division-game flag, roof, surface, temperature, and wind.
+The model uses basic matchup features and rolling team-performance features.
 
-It also adds rolling team-performance features for both the home and away teams:
+Basic features include:
 
-- 3-game and 5-game rolling win percentage
-- 3-game and 5-game rolling points scored
-- 3-game and 5-game rolling points allowed
+- `season`
+- `week`
+- `home_team`
+- `away_team`
+- division-game indicator
+- roof, surface, temperature, and wind
 
-## Evaluation Plan
+Rolling features include 3-game and 5-game averages for both teams:
 
-The main evaluation uses a season-based split instead of a random split. This better simulates the real use case: training on past seasons and predicting future games.
+- win percentage
+- points scored
+- points allowed
+
+Rolling statistics are shifted before being merged into each matchup. The current game is excluded from its own features, so the model only sees information that would have been available before kickoff.
+
+## Modeling Approach
+
+All models use the same season-based split:
 
 - Train: 2000-2020
 - Validation: 2021-2023
 - Test: 2024-2025
 
-Every model will use the same split so model comparisons are based on the same held-out seasons.
+A season-based split is used instead of a random split because the real prediction task is forward-looking: train on past seasons and predict future games.
 
-## Data Leakage Prevention
+Models compared:
 
-Rolling team statistics are shifted before being used as matchup features so that each prediction only uses information available before that game. For each team, the current game is excluded with a one-game shift before calculating the 3-game and 5-game rolling averages. This prevents the model from learning from the result or score of the game it is trying to predict.
+- Logistic Regression baseline
+- XGBoost traditional ML model
+- PyTorch MLP neural network
+
+## Results
+
+| Model | Validation Accuracy | Validation ROC-AUC | Validation Log Loss | Test Accuracy | Test ROC-AUC | Test Log Loss |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Logistic Regression | 0.578 | 0.612 | 0.679 | 0.617 | 0.672 | 0.649 |
+| XGBoost | 0.605 | 0.625 | 0.671 | 0.637 | 0.691 | 0.635 |
+| PyTorch MLP | 0.586 | 0.613 | 0.746 | 0.587 | 0.656 | 0.699 |
+
+XGBoost performed best overall on the held-out test seasons. This is reasonable because boosted tree models often perform well on smaller tabular datasets with engineered features.
+
+More detail is available in `docs/model_results.md`.
 
 ## How to Run
 
@@ -128,8 +110,59 @@ Install dependencies:
 poetry install
 ```
 
-Run the local prediction demo:
+Load raw data:
+
+```bash
+.venv/bin/python src/data/load_raw_data.py
+```
+
+Create the modeling dataset and features:
+
+```bash
+.venv/bin/python src/data/make_dataset.py
+.venv/bin/python src/features/build_features.py
+.venv/bin/python src/data/split_dataset.py
+```
+
+Train models:
+
+```bash
+.venv/bin/python src/models/train_logistic_regression.py
+.venv/bin/python src/models/train_xgboost.py
+.venv/bin/python src/models/train_pytorch.py
+```
+
+Recompute standardized metrics:
+
+```bash
+.venv/bin/python src/evaluation/evaluate_models.py
+```
+
+Run the local Streamlit app:
 
 ```bash
 streamlit run app/streamlit_app.py
 ```
+
+Deployment:
+
+- Streamlit Community Cloud: [NFL Game Predictor](https://noahh273-nfl-predictor-appstreamlit-app-arwef9.streamlit.app/)
+
+## Limitations
+
+- Injuries are not fully modeled.
+- Roster changes and quarterback changes are difficult to capture.
+- NFL games have high randomness and a small sample size compared with many ML problems.
+- The model predicts straight-up home wins, not betting spreads or betting value.
+- The project is intended as a learning project, not as betting advice.
+
+## Future Work
+
+- Add model calibration to improve probability quality.
+- Add richer team-strength features such as ELO ratings.
+- Improve the Streamlit UI with clearer matchup context and recent team form.
+- Add automated notebook execution checks.
+
+## Resume Bullet
+
+Built an end-to-end NFL game prediction system using Python, nflreadpy, scikit-learn, XGBoost, and PyTorch, engineering rolling team-performance features and evaluating models with season-based validation.
